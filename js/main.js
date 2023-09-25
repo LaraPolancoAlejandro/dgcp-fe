@@ -7,13 +7,21 @@ function formatDate(date) {
     return `${month}-${day}-${year}`;
 }
 
+let dataTable = $('#resultsTable').DataTable({
+    pageLength: 10,
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
+});
+
 document.getElementById('submitButton').addEventListener('click', function() {
     const page = document.getElementById('page').value || 1;
     const limit = document.getElementById('limit').value;
-    const startDate = formatDate(new Date(document.getElementById('startDate').value));
-    const endDate = formatDate(new Date(document.getElementById('endDate').value));
+    const startDateElement = document.getElementById('startDate');
+    const endDateElement = document.getElementById('endDate');
     const empresa = document.getElementById('empresa').value;
     const rubros = document.getElementById('rubros').value;
+
+    const startDate = startDateElement.value ? formatDate(new Date(startDateElement.value)) : null;
+    const endDate = endDateElement.value ? formatDate(new Date(endDateElement.value)) : null;
 
     let apiUrl = `http://localhost:5277/api/v1/tenders?`;
 
@@ -35,65 +43,36 @@ document.getElementById('submitButton').addEventListener('click', function() {
     })
     .then(response => response.json())
     .then(data => {
-        const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
-        tableBody.innerHTML = ''; // Limpiar las filas existentes
+        dataTable.clear(); // Limpiar los datos existentes en DataTable
 
         if (!data.items || data.items.length === 0) {
             console.error('No se recibieron datos del API');
-            $('#resultsTable').DataTable().clear().draw(); // Limpiar los datos del DataTable existente
+            dataTable.draw(); // Dibujar la tabla vacía
             return;
         }
 
         data.items.forEach(row => {
-            const newRow = tableBody.insertRow();
+            // Construir una nueva fila como un array de columnas
+            const newRow = [
+                "DO", // País con valor fijo "DO"
+                row.tenderId || '',
+                row.description || '',
+                row.fase || '',
+                row.startDate || '',
+                row.endDate || '',
+                row.amount || '',
+                row.currency || '',
+                row.estado || '',
+                row.procedureType || '',
+                row.contractType || '',
+                `<a href="${row.documentUrl || '#'}" target="_blank">Detalle</a>` // Detalle como un enlace
+            ];
             
-            // Añadir País con valor fijo "DO"
-            let cell = newRow.insertCell(0);
-            cell.innerText = "DO";
-            
-            // Añadir Referencia
-            cell = newRow.insertCell(1);
-            cell.innerText = row.tenderId || '';
-            
-            // Añadir Descripción
-            cell = newRow.insertCell(2);
-            cell.innerText = row.description || '';
-            
-            // Continuar con las demás columnas...
-            cell = newRow.insertCell(3);
-            cell.innerText = row.fase || '';
-            
-            cell = newRow.insertCell(4);
-            cell.innerText = row.startDate || '';
-            
-            cell = newRow.insertCell(5);
-            cell.innerText = row.endDate || '';
-            
-            cell = newRow.insertCell(6);
-            cell.innerText = row.amount || '';
-            
-            cell = newRow.insertCell(7);
-            cell.innerText = row.currency || '';
-            
-            cell = newRow.insertCell(8);
-            cell.innerText = row.estado || '';
-            
-            cell = newRow.insertCell(9);
-            cell.innerText = row.procedureType || '';
-            
-            cell = newRow.insertCell(10);
-            cell.innerText = row.contractType || '';
-            
-            cell = newRow.insertCell(11); // Asegúrate de que el índice sea correcto
-            const link = document.createElement('a');
-            link.href = row.documentUrl || '#'; // Usa '#' o '' como href si documentUrl es undefined o null
-            link.innerText = 'Detalle'; // Texto del enlace
-            link.target = '_blank'; // Abre el enlace en una nueva pestaña
-            cell.appendChild(link);
+            // Añadir la nueva fila a DataTable
+            dataTable.row.add(newRow);
         });
-        $('#resultsTable').DataTable();
-        dataTable.clear().draw(); // Limpiar los datos del DataTable existente
-        dataTable.rows.add(data.items).draw(); // Añadir los nuevos datos al DataTable
+
+        dataTable.draw(); // Dibujar la tabla con los nuevos datos
         
     })
     .catch(error => console.error('Error fetching data:', error));
